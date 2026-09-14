@@ -1,0 +1,13 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir sqlalchemy[asyncio] asyncpg pydantic-settings
+
+COPY package/livegraph/config.py package/livegraph/config.py
+COPY package/livegraph/storage/postgres package/livegraph/storage/postgres
+COPY package/livegraph/storage/__init__.py package/livegraph/storage/__init__.py
+COPY package/livegraph/__init__.py package/livegraph/__init__.py
+COPY migrate.py .
+
+CMD ["python", "migrate.py"]

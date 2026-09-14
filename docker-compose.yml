@@ -4,9 +4,24 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      POSTGRES_DSN: "postgresql+asyncpg://livegraph:livegraph_dev_password@postgres:5432/livegraph"
     depends_on:
       postgres:
         condition: service_healthy
+      storage-migrator:
+        condition: service_completed_successfully
+
+  storage-migrator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrator
+    environment:
+      POSTGRES_DSN: "postgresql+asyncpg://livegraph:livegraph_dev_password@postgres:5432/livegraph"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: postgres:16
