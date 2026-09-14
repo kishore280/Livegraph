@@ -23,6 +23,31 @@ services:
         condition: service_healthy
     restart: "no"
 
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: arq worker_main.WorkerSettings
+    environment:
+      POSTGRES_DSN: "postgresql+asyncpg://livegraph:livegraph_dev_password@postgres:5432/livegraph"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage-migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 10s
+      start_period: 20s
+      timeout: 5s
+      retries: 5
+
   postgres:
     image: postgres:16
     restart: unless-stopped
