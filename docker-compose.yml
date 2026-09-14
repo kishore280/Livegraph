@@ -4,3 +4,28 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: livegraph
+      POSTGRES_PASSWORD: livegraph_dev_password
+      POSTGRES_DB: livegraph
+    ports:
+      - "15532:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U livegraph"]
+      interval: 10s
+      start_period: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    
