@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from server.routers import system_router
 
 name = "LiveGraph Backend"
