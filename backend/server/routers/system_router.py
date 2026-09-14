@@ -7,3 +7,6 @@ router = APIRouter(prefix="/api/system", tags=["system"])
 async def health():
     return {"status": "alive"}
 
+@router.get("/ready")
+async def ready():
+    pass
