@@ -1,3 +1,4 @@
+import json
 import sys
 
 sys.path.insert(0, "package")
@@ -7,8 +8,17 @@ from typing import ClassVar
 from livegraph.models.chat import get_chat_model
 from livegraph.storage.postgres.manager import get_postgres_manager
 from livegraph.storage.postgres.models import AgentRun, Message
-from livegraph.storage.redis import get_arq_redis_settings
+from livegraph.storage.redis import (
+    get_arq_redis_settings,
+    get_async_redis,
+    run_event_stream_key,
+)
 from sqlalchemy import select
+
+
+async def _publish_event(run_id: str, event_type: str, payload: dict) -> None:
+    redis = get_async_redis()
+    await redis.xadd(run_event_stream_key(run_id), {"data": json.dumps({"event": event_type, **payload})})
 
 
 async def execute_agent_run(ctx: dict, run_id: str) -> None:
@@ -23,8 +33,12 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
         user_message = result.scalar_one()
 
     model = get_chat_model()
-    response = await model.ainvoke(user_message.content)
-    reply_text = response.content if isinstance(response.content, str) else str(response.content)
+    reply_text = ""
+    async for chunk in model.astream(user_message.content):
+        delta = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+        if delta:
+            reply_text += delta
+            await _publish_event(run_id, "message-delta", {"content": delta})
 
     async with manager.get_session() as db:
         db.add(Message(session_id=run.session_id, role="assistant", content=reply_text, run_id=run_id))
@@ -32,6 +46,8 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
         run = result.scalar_one()
         run.status = "completed"
         await db.commit()
+
+    await _publish_event(run_id, "run-finished", {"status": "completed"})
 
 
 class WorkerSettings:
