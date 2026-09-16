@@ -4,12 +4,11 @@ sys.path.insert(0, "package")
 
 from typing import ClassVar
 
-from sqlalchemy import select
-
 from livegraph.models.chat import get_chat_model
 from livegraph.storage.postgres.manager import get_postgres_manager
 from livegraph.storage.postgres.models import AgentRun, Message
 from livegraph.storage.redis import get_arq_redis_settings
+from sqlalchemy import select
 
 
 async def execute_agent_run(ctx: dict, run_id: str) -> None:
