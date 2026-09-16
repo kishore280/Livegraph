@@ -15,3 +15,6 @@ def get_async_redis() -> aioredis.Redis:
 def get_arq_redis_settings()-> RedisSettings:
     from livegraph.config import settings
     return RedisSettings.from_dsn(settings.redis_url)
+
+def run_event_stream_key(run_id: str) -> str:
+    return f"livegraph:run:{run_id}:events"
