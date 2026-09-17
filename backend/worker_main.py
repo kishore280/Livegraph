@@ -5,9 +5,13 @@ sys.path.insert(0, "package")
 
 from typing import ClassVar
 
+from langchain.agents import create_agent
+from langchain_core.messages import AIMessageChunk
+from livegraph.agents.context import LiveGraphContext
+from livegraph.agents.tools import search_session, web_search
 from livegraph.models.chat import get_chat_model
 from livegraph.storage.postgres.manager import get_postgres_manager
-from livegraph.storage.postgres.models import AgentRun, Message
+from livegraph.storage.postgres.models import AgentRun, Message, ResearchSession
 from livegraph.storage.redis import (
     get_arq_redis_settings,
     get_async_redis,
@@ -27,15 +31,38 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
         result = await db.execute(select(AgentRun).where(AgentRun.id == run_id))
         run = result.scalar_one()
 
+        result = await db.execute(select(ResearchSession).where(ResearchSession.id == run.session_id))
+        research_session = result.scalar_one()
+
         result = await db.execute(
             select(Message).where(Message.run_id == run_id, Message.role == "user")
         )
         user_message = result.scalar_one()
 
-    model = get_chat_model()
+    context = LiveGraphContext(session_id=research_session.session_id)
+    agent = create_agent(
+        model=get_chat_model(),
+        system_prompt=(
+            "You are a research assistant. Use web_search to find information you don't "
+            "already know, and search_session to reuse content already gathered this session "
+            "before searching the web again."
+        ),
+        tools=[web_search, search_session],
+        context_schema=LiveGraphContext,
+    )
+
     reply_text = ""
-    async for chunk in model.astream(user_message.content):
-        delta = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+    async for mode, chunk in agent.astream(
+        {"messages": [{"role": "user", "content": user_message.content}]},
+        context=context,
+        stream_mode=["updates", "messages"],
+    ):
+        if mode != "messages":
+            continue
+        message_chunk, _metadata = chunk
+        if not isinstance(message_chunk, AIMessageChunk):
+            continue
+        delta = getattr(message_chunk, "content", "") or ""
         if delta:
             reply_text += delta
             await _publish_event(run_id, "message-delta", {"content": delta})
