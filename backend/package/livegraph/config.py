@@ -14,5 +14,8 @@ class Settings(BaseSettings):
     embed_dimension: int = 384
     milvus_uri: str = "http://milvus:19530"
     milvus_token: str = ""
+    neo4j_uri: str = "bolt://graph:7687"
+    neo4j_username: str = "neo4j"
+    neo4j_password: str = "livegraph_dev_password"
 
 settings = Settings()

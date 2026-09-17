@@ -10,3 +10,4 @@ langchain-openai
 httpx
 requests
 pymilvus
+neo4j

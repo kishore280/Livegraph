@@ -17,6 +17,8 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
+      graph:
+        condition: service_healthy
 
   storage-migrator:
     build:
@@ -48,6 +50,8 @@ services:
       milvus:
         condition: service_healthy
       ollama:
+        condition: service_healthy
+      graph:
         condition: service_healthy
 
   redis:
@@ -136,6 +140,25 @@ services:
       timeout: 5s
       retries: 5
 
+  graph:
+    image: neo4j:5.26.29
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/livegraph_dev_password
+      NEO4J_server_bolt_listen__address: "0.0.0.0:7687"
+      NEO4J_server_http_listen__address: "0.0.0.0:7474"
+    volumes:
+      - neo4j_data:/data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u neo4j -p livegraph_dev_password 'RETURN 1;' >/dev/null || exit 1"]
+      interval: 10s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
+
   postgres:
     image: postgres:16
     restart: unless-stopped
@@ -160,4 +183,5 @@ volumes:
   rustfs_data:
   milvus_data:
   ollama_data:
+  neo4j_data:
     
