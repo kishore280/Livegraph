@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from livegraph.storage.postgres.models import Base
 
 SCHEMA_VERSION_TABLE = "livegraph_schema_migrations"
-BUSINESS_SCHEMA_VERSION = 2
+BUSINESS_SCHEMA_VERSION = 3
 
 
 class PostgresManager:
