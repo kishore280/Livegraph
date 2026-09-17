@@ -17,5 +17,6 @@ class Settings(BaseSettings):
     neo4j_uri: str = "bolt://graph:7687"
     neo4j_username: str = "neo4j"
     neo4j_password: str = "livegraph_dev_password"
+    tavily_api_key: str = ""
 
 settings = Settings()
