@@ -13,6 +13,10 @@ services:
         condition: service_healthy
       storage-migrator:
         condition: service_completed_successfully
+      milvus:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
 
   storage-migrator:
     build:
@@ -41,12 +45,92 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      milvus:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 10s
+      start_period: 20s
+      timeout: 5s
+      retries: 5
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    restart: unless-stopped
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: "revision"
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+      ETCD_SNAPSHOT_COUNT: "50000"
+    volumes:
+      - etcd_data:/etcd_data
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls=http://0.0.0.0:2379 --data-dir=/etcd_data
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      start_period: 20s
+      timeout: 5s
+      retries: 5
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: livegraph
+      RUSTFS_SECRET_KEY: livegraph_dev_password
+    command: /data
+    volumes:
+      - rustfs_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      start_period: 20s
+      timeout: 5s
+      retries: 5
+
+  milvus:
+    image: milvusdb/milvus:v2.5.6
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: rustfs:9000
+      MINIO_ACCESS_KEY_ID: livegraph
+      MINIO_SECRET_ACCESS_KEY: livegraph_dev_password
+      MILVUS_LOG_LEVEL: error
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 10s
+      start_period: 90s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      etcd:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
       start_period: 20s
       timeout: 5s
@@ -72,4 +156,8 @@ services:
 
 volumes:
   postgres_data:
+  etcd_data:
+  rustfs_data:
+  milvus_data:
+  ollama_data:
     
