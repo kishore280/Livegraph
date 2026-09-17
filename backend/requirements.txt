@@ -7,3 +7,6 @@ redis
 arq
 langchain
 langchain-openai
+httpx
+requests
+pymilvus
