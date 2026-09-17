@@ -11,3 +11,4 @@ httpx
 requests
 pymilvus
 neo4j
+tavily-python
