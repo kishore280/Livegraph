@@ -1,0 +1,31 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --font-sans: "Sora", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  --color-bg: #0b0f19;
+  --color-surface: #131826;
+  --color-border: #1f2637;
+  --color-text: #e5e9f2;
+  --color-text-dim: #7d879c;
+  --color-accent: #818cf8;
+  --color-accent-dim: rgba(129, 140, 248, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
