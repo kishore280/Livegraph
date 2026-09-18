@@ -90,6 +90,32 @@
   padding-left: 22px;
 }
 
+.message-content a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(129, 140, 248, 0.4);
+}
+
+.message-content a:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin: 16px 0 6px;
+}
+
+.message-content h1:first-child,
+.message-content h2:first-child,
+.message-content h3:first-child {
+  margin-top: 0;
+}
+
 .message-row--user .message-content {
   background: var(--color-accent-dim);
 }
