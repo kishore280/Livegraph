@@ -43,9 +43,13 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
     agent = create_agent(
         model=get_chat_model(),
         system_prompt=(
-            "You are a research assistant. Use web_search to find information you don't "
-            "already know, and search_session to reuse content already gathered this session "
-            "before searching the web again."
+            "You are a live research assistant. For every user question, first call "
+            "search_session to check what has already been gathered this session. Then always "
+            "call web_search at least once for the topic, even if you already know the answer "
+            "from your own training — the user is watching a knowledge graph build from your "
+            "searches in real time, so search results matter more than recalled knowledge. "
+            "Only skip web_search if search_session already returned content that fully answers "
+            "the question. Answer using the retrieved content, and cite what you found."
         ),
         tools=[web_search, search_session],
         context_schema=LiveGraphContext,
@@ -59,8 +63,10 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
     ):
         if mode != "messages":
             continue
-        message_chunk, _metadata = chunk
+        message_chunk, metadata = chunk
         if not isinstance(message_chunk, AIMessageChunk):
+            continue
+        if metadata.get("langgraph_node") != "model":
             continue
         delta = getattr(message_chunk, "content", "") or ""
         if delta:
