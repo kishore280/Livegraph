@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     redis_url:str= "redis://redis:6379"
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-20b"
+    cerebras_api_key: str = ""
+    cerebras_model: str = "gpt-oss-120b"
     embed_model: str = "all-minilm"
     embed_base_url: str = "http://ollama:11434/v1/embeddings"
     embed_api_key: str = "ollama"
