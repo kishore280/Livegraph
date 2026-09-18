@@ -1,0 +1,43 @@
+.eval-panel {
+  padding: 20px 24px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.eval-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.eval-panel__title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.eval-panel__detail {
+  margin-top: 20px;
+}
+
+.eval-panel__item p {
+  margin: 0 0 8px;
+}
+
+.eval-panel__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.eval-panel__row--selected td {
+  background: var(--color-accent-dim) !important;
+}
+
+.eval-panel table {
+  cursor: pointer;
+}
