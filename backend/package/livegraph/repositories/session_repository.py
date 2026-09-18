@@ -22,4 +22,10 @@ class SessionRepository:
         self.db.add(Message(session_id=session_id, content=content, run_id=run_id, role="user"))
         await self.db.flush()
         return run
-        
+
+    async def list_messages(self, session_id: int) -> list[Message]:
+        result = await self.db.execute(
+            select(Message).where(Message.session_id == session_id).order_by(Message.created_at)
+        )
+        return list(result.scalars().all())
+

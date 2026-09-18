@@ -29,6 +29,18 @@ async def create_session():
         return session.to_dict()
 
 
+@router.get("/{session_id}")
+async def get_session(session_id: str):
+    manager = get_postgres_manager()
+    async with manager.get_session() as db:
+        repo = SessionRepository(db)
+        session = await repo.get_session_by_id(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        messages = await repo.list_messages(session.id)
+        return {**session.to_dict(), "messages": [m.to_dict() for m in messages]}
+
+
 @router.post("/{session_id}/query")
 async def submit_query(session_id: str, content: str = Body(embed=True)):
     manager = get_postgres_manager()
