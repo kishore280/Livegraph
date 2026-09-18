@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 from langgraph.prebuilt.tool_node import ToolRuntime
 
+from livegraph.agents.context import LiveGraphContext
 from livegraph.knowledge.chunking import chunk_text
 from livegraph.knowledge.graphs.service import index_chunks_into_graph
 from livegraph.knowledge.milvus_store import add_chunks, search
@@ -34,6 +35,11 @@ async def web_search(query: str, runtime: ToolRuntime) -> str:
     if all_chunks:
         added = await add_chunks(session_id, all_chunks)
         await index_chunks_into_graph(session_id, added)
+
+    if isinstance(runtime.context, LiveGraphContext):
+        runtime.context.sources.extend(
+            {"title": r.get("title", ""), "url": r.get("url", "")} for r in results if r.get("url")
+        )
 
     return "\n\n".join(
         f"[{r.get('title', '')}]({r.get('url', '')})\n{r.get('content', '')}" for r in results

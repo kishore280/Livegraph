@@ -49,7 +49,9 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
             "from your own training — the user is watching a knowledge graph build from your "
             "searches in real time, so search results matter more than recalled knowledge. "
             "Only skip web_search if search_session already returned content that fully answers "
-            "the question. Answer using the retrieved content, and cite what you found."
+            "the question. Answer using the retrieved content in plain prose — do not add your "
+            "own citation markers, footnotes, or a sources list; the sources you used are tracked "
+            "automatically and shown to the user separately."
         ),
         tools=[web_search, search_session],
         context_schema=LiveGraphContext,
@@ -72,6 +74,19 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
         if delta:
             reply_text += delta
             await _publish_event(run_id, "message-delta", {"content": delta})
+
+    seen_urls: set[str] = set()
+    sources = [
+        s
+        for s in context.sources
+        if s["url"] not in seen_urls and not seen_urls.add(s["url"])
+    ]
+    if sources:
+        sources_block = "\n\n**Sources**\n" + "\n".join(
+            f"- [{s['title'] or s['url']}]({s['url']})" for s in sources
+        )
+        reply_text += sources_block
+        await _publish_event(run_id, "message-delta", {"content": sources_block})
 
     async with manager.get_session() as db:
         db.add(Message(session_id=run.session_id, role="assistant", content=reply_text, run_id=run_id))
