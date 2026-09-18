@@ -39,27 +39,31 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
         )
         user_message = result.scalar_one()
 
+    checkpointer = await manager.setup_langgraph_checkpointer()
     context = LiveGraphContext(session_id=research_session.session_id)
     agent = create_agent(
         model=get_chat_model(),
+        checkpointer=checkpointer,
         system_prompt=(
             "You are a live research assistant. For every user question, first call "
-            "search_session to check what has already been gathered this session. Then always "
-            "call web_search at least once for the topic, even if you already know the answer "
-            "from your own training — the user is watching a knowledge graph build from your "
-            "searches in real time, so search results matter more than recalled knowledge. "
-            "Only skip web_search if search_session already returned content that fully answers "
-            "the question. Answer using the retrieved content in plain prose — do not add your "
-            "own citation markers, footnotes, or a sources list; the sources you used are tracked "
-            "automatically and shown to the user separately."
+            "search_session to check what has already been gathered this session. Only call "
+            "web_search if search_session has no relevant content for this question — do not "
+            "skip web_search just because you already know the answer from your own training; "
+            "recalled knowledge does not count as 'relevant content already gathered'. Answer "
+            "using the retrieved content in plain prose — do not add your own citation markers, "
+            "footnotes, or a sources list; the sources you used are tracked automatically and "
+            "shown to the user separately."
         ),
         tools=[web_search, search_session],
         context_schema=LiveGraphContext,
     )
 
+    config = {"configurable": {"thread_id": research_session.session_id}}
+
     reply_text = ""
     async for mode, chunk in agent.astream(
         {"messages": [{"role": "user", "content": user_message.content}]},
+        config=config,
         context=context,
         stream_mode=["updates", "messages"],
     ):
