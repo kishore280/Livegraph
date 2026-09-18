@@ -61,36 +61,45 @@ async def execute_agent_run(ctx: dict, run_id: str) -> None:
     config = {"configurable": {"thread_id": research_session.session_id}}
 
     reply_text = ""
-    async for mode, chunk in agent.astream(
-        {"messages": [{"role": "user", "content": user_message.content}]},
-        config=config,
-        context=context,
-        stream_mode=["updates", "messages"],
-    ):
-        if mode != "messages":
-            continue
-        message_chunk, metadata = chunk
-        if not isinstance(message_chunk, AIMessageChunk):
-            continue
-        if metadata.get("langgraph_node") != "model":
-            continue
-        delta = getattr(message_chunk, "content", "") or ""
-        if delta:
-            reply_text += delta
-            await _publish_event(run_id, "message-delta", {"content": delta})
+    try:
+        async for mode, chunk in agent.astream(
+            {"messages": [{"role": "user", "content": user_message.content}]},
+            config=config,
+            context=context,
+            stream_mode=["updates", "messages"],
+        ):
+            if mode != "messages":
+                continue
+            message_chunk, metadata = chunk
+            if not isinstance(message_chunk, AIMessageChunk):
+                continue
+            if metadata.get("langgraph_node") != "model":
+                continue
+            delta = getattr(message_chunk, "content", "") or ""
+            if delta:
+                reply_text += delta
+                await _publish_event(run_id, "message-delta", {"content": delta})
 
-    seen_urls: set[str] = set()
-    sources = [
-        s
-        for s in context.sources
-        if s["url"] not in seen_urls and not seen_urls.add(s["url"])
-    ]
-    if sources:
-        sources_block = "\n\n**Sources**\n" + "\n".join(
-            f"- [{s['title'] or s['url']}]({s['url']})" for s in sources
-        )
-        reply_text += sources_block
-        await _publish_event(run_id, "message-delta", {"content": sources_block})
+        seen_urls: set[str] = set()
+        sources = [
+            s
+            for s in context.sources
+            if s["url"] not in seen_urls and not seen_urls.add(s["url"])
+        ]
+        if sources:
+            sources_block = "\n\n**Sources**\n" + "\n".join(
+                f"- [{s['title'] or s['url']}]({s['url']})" for s in sources
+            )
+            reply_text += sources_block
+            await _publish_event(run_id, "message-delta", {"content": sources_block})
+    except Exception as exc:
+        async with manager.get_session() as db:
+            result = await db.execute(select(AgentRun).where(AgentRun.id == run_id))
+            run = result.scalar_one()
+            run.status = "failed"
+            await db.commit()
+        await _publish_event(run_id, "run-finished", {"status": "failed", "error": str(exc)})
+        raise
 
     async with manager.get_session() as db:
         db.add(Message(session_id=run.session_id, role="assistant", content=reply_text, run_id=run_id))
